@@ -2,7 +2,7 @@ import os, json
 import cv2, shutil
 import numpy as np
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 from PySide6 import QtCore
 from PySide6.QtGui import QColor
 
@@ -15,6 +15,8 @@ from modules.rendering.render import get_best_render_area, pyside_word_wrap
 from modules.utils.pipeline_utils import generate_mask, get_language_code, is_directory_empty
 from modules.utils.translator_utils import get_raw_translation, get_raw_text, format_translations, set_upper_case
 from modules.utils.archives import make
+from modules.utils.textblock import TextBlock
+from modules.translation.processor import Translator
 
 from app.ui.canvas.rectangle import MoveableRectItem
 from app.ui.canvas.text_item import OutlineInfo, OutlineType
@@ -636,6 +638,23 @@ class ComicTranslatePipeline:
                 f.write("=" * 80 + "\n\n")
         
         print(f"Text extraction complete. Results saved to: {output_path}")
+
+    def llm_translate_only(self, image: np.ndarray, source_lang: str, target_lang: str) -> Tuple[str, str]:
+        translator = Translator(self.main_page, source_lang, target_lang)
+        if not translator.is_llm_engine:
+            raise ValueError("Selected translator is not an LLM. Please select an LLM translator in settings.")
+
+        # Assuming the LLM engine has a method to handle direct image translation
+        # This method should return a list of TextBlock objects with original and translated text
+        # Or, it could return a tuple of (original_text_string, translated_text_string)
+        # For now, let's assume it returns a list of TextBlock objects
+        blk_list = translator.engine.translate_image_to_textblocks(image)
+
+        # Concatenate all original and translated texts
+        all_original_text = "\n".join([blk.text for blk in blk_list if blk.text])
+        all_translated_text = "\n".join([blk.translation for blk in blk_list if blk.translation])
+
+        return all_original_text, all_translated_text
 
 
 

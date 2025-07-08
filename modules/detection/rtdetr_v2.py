@@ -50,6 +50,7 @@ class RTDetrV2Detection(DetectionEngine):
             
             # Move model to appropriate device
             if self.device == 'cuda' and torch.cuda.is_available():
+                print(torch.cuda.get_device_name(0))
                 self.model = self.model.to('cuda')
     
     def detect(self, image: np.ndarray) -> list[TextBlock]:

@@ -132,6 +132,7 @@ class ComicTranslate(ComicTranslateUI):
         # Connect other buttons and widgets
         self.translate_button.clicked.connect(self.start_batch_process)
         self.extract_text_button.clicked.connect(self.start_text_extraction)
+        self.llm_translate_button.clicked.connect(self.start_llm_translate)
         self.cancel_button.clicked.connect(self.cancel_current_task)
         self.set_all_button.clicked.connect(self.text_ctrl.set_src_trg_all)
         self.clear_rectangles_button.clicked.connect(self.image_viewer.clear_rectangles)
@@ -687,4 +688,34 @@ class ComicTranslate(ComicTranslateUI):
         QtWidgets.QMessageBox.information(self, "Text Extraction Complete", 
             "Text extraction has been completed successfully!\n"
             "The extracted text has been saved to a text file in the output directory.")
+
+    def start_llm_translate(self):
+        if not self.image_viewer.hasPhoto():
+            QtWidgets.QMessageBox.warning(self, "Warning", "No image loaded for LLM translation.")
+            return
+
+        source_lang = self.s_combo.currentText()
+        target_lang = self.t_combo.currentText()
+
+        if not validate_translator(self, source_lang, target_lang):
+            return
+
+        self.llm_translate_button.setEnabled(False)
+        self.loading.setVisible(True)
+        self.disable_hbutton_group()
+
+        self.run_threaded(
+            lambda: self.pipeline.llm_translate_only(self.image_viewer.get_cv2_image(), source_lang, target_lang),
+            self.on_llm_translate_complete,
+            self.default_error_handler,
+            self.on_manual_finished
+        )
+
+    def on_llm_translate_complete(self, result):
+        original_text, translated_text = result
+        self.s_text_edit.setPlainText(original_text)
+        self.t_text_edit.setPlainText(translated_text)
+        self.llm_translate_button.setEnabled(True)
+        self.loading.setVisible(False)
+        self.enable_hbutton_group()
 

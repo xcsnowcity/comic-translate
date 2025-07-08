@@ -111,6 +111,19 @@ class LLMTranslation(TranslationEngine):
             List of updated TextBlock objects with translations
         """
         pass
+
+    @abstractmethod
+    def translate_image_to_textblocks(self, image: np.ndarray) -> list[TextBlock]:
+        """
+        Translate text directly from an image using LLM.
+        
+        Args:
+            image: Image as numpy array
+            
+        Returns:
+            List of TextBlock objects with original and translated text
+        """
+        pass
     
     def get_system_prompt(self, source_lang: str, target_lang: str) -> str:
         """

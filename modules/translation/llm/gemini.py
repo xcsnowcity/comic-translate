@@ -1,9 +1,11 @@
 from typing import Any
 import numpy as np
 import requests
+import json
 
 from .base import BaseLLMTranslation
 from ...utils.translator_utils import MODEL_MAP
+from ...utils.textblock import TextBlock
 
 
 class GeminiTranslation(BaseLLMTranslation):
@@ -33,6 +35,8 @@ class GeminiTranslation(BaseLLMTranslation):
         
         # Map friendly model name to API model name
         self.model = MODEL_MAP.get(self.model_name)
+        self.source_lang_en = source_lang
+        self.target_lang_en = target_lang
     
     def _perform_translation(self, user_prompt: str, system_prompt: str, image: np.ndarray) -> str:
         """
@@ -136,3 +140,41 @@ class GeminiTranslation(BaseLLMTranslation):
             return result
         except (KeyError, IndexError) as e:
             raise Exception(f"Failed to parse API response: {str(e)}")
+
+    def translate_image_to_textblocks(self, image: np.ndarray) -> list[TextBlock]:
+        # Construct a prompt that asks the LLM to identify and translate text in the image
+        user_prompt = f"Identify all text in the image. For each piece of text, provide the original text and its {self.target_lang_en} translation. Format the output as a JSON array of objects, where each object has 'original_text' and 'translated_text' keys."
+        
+        system_prompt = self.get_system_prompt(self.source_lang_en, self.target_lang_en)
+        
+        # Set img_as_llm_input to True to send the image to the LLM
+        self.img_as_llm_input = True
+        
+        response_text = self._perform_translation(user_prompt, system_prompt, image)
+        
+        # Parse the JSON response from the LLM
+        try:
+            # Remove markdown code block if present
+            if response_text.startswith('```json') and response_text.endswith('```'):
+                response_text = response_text[len('```json'):-len('```')].strip()
+            parsed_response = json.loads(response_text)
+            if not isinstance(parsed_response, list):
+                raise ValueError("LLM response is not a JSON array.")
+            
+            text_blocks = []
+            for item in parsed_response:
+                original_text = item.get("original_text", "")
+                translated_text = item.get("translated_text", "")
+                
+                # Create TextBlock objects. Since we don't have precise bounding boxes
+                # from this LLM call, we'll initialize with dummy coordinates or None.
+                # The TextBlock constructor might need to be flexible for this.
+                # For now, assuming TextBlock can be created with just text.
+                # If the LLM provides coordinates, they can be parsed and used here.
+                blk = TextBlock(text=original_text, translation=translated_text)
+                text_blocks.append(blk)
+            return text_blocks
+        except json.JSONDecodeError as e:
+            raise Exception(f"Failed to parse LLM response as JSON: {e}. Response: {response_text}")
+        except Exception as e:
+            raise Exception(f"Error processing LLM response: {e}. Response: {response_text}")
