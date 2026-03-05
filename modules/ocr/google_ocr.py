@@ -41,7 +41,7 @@ class GoogleOCR(OCREngine):
             headers=headers,
             params={"key": self.api_key},
             data=json.dumps(payload),
-            timeout=10
+            timeout=50
         )
         
         response.raise_for_status()
