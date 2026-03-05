@@ -66,6 +66,18 @@ class Messages:
         )
 
     @staticmethod
+    def show_missing_credentials_error(parent, tool_name: str, credential_label: str):
+        MMessage.error(
+            text=QCoreApplication.translate(
+                "Messages",
+                "{} requires an API key. Please enter your {} in Settings > Credentials."
+            ).format(tool_name, credential_label),
+            parent=parent,
+            duration=None,
+            closable=True
+        )
+
+    @staticmethod
     def show_insufficient_credits_error(parent, details: str = None):
         """
         Show an error message when the user has insufficient credits.

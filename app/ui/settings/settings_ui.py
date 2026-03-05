@@ -57,6 +57,7 @@ class SettingsPageUI(QtWidgets.QWidget):
         self.ocr_engines = [
             self.tr("Default"), 
             self.tr('Microsoft OCR'), 
+            self.tr('Google Cloud Vision'),
             self.tr('Gemini-2.0-Flash'), 
         ]
         self.inpaint_strategy = [self.tr('Resize'), self.tr('Original'), self.tr('Crop')]
@@ -64,6 +65,8 @@ class SettingsPageUI(QtWidgets.QWidget):
         self.alignment = [self.tr("Left"), self.tr("Center"), self.tr("Right")]
 
         self.credential_services = [
+            self.tr("Google Cloud"),
+            self.tr("Google Gemini"),
             self.tr("Custom"), 
         ]
         
@@ -312,20 +315,27 @@ class SettingsPageUI(QtWidgets.QWidget):
         ]):
             nav_card = ClickMeta(extra=False)
             nav_card.setup_data(setting)
-            nav_card.clicked.connect(lambda i=index, c=nav_card: self.on_nav_clicked(i, c))
+            # Connect using only the index — do NOT capture nav_card in the lambda.
+            # The captured object and the object stored in self.nav_cards can end up
+            # being different Python instances (identity mismatch), which breaks the
+            # `is not` guard in on_nav_clicked.  Looking up by index guarantees we
+            # always operate on the canonical object from self.nav_cards.
+            nav_card.clicked.connect(lambda i=index: self.on_nav_clicked(i))
             navbar_layout.addWidget(nav_card)
             self.nav_cards.append(nav_card)
 
         navbar_layout.addStretch(1)
         return navbar_widget
 
-    def on_nav_clicked(self, index: int, clicked_nav: ClickMeta):
-        # Remove highlight from the previously highlighted nav item
-        if self.current_highlighted_nav:
-            self.current_highlighted_nav.set_highlight(False)
+    def on_nav_clicked(self, index: int):
+        # Look up the clicked card by index from the authoritative nav_cards list.
+        # This guarantees the object identity check below is always correct.
+        clicked_nav = self.nav_cards[index]
 
-        # Highlight the clicked nav item
-        clicked_nav.set_highlight(True)
+        # Deselect every card, then select only the clicked one.
+        for nav_card in self.nav_cards:
+            nav_card.set_highlight(nav_card is clicked_nav)
+
         self.current_highlighted_nav = clicked_nav
 
         # Set the current index of the stacked widget

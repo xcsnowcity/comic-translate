@@ -31,7 +31,7 @@ def get_config(settings_page: SettingsPage):
     return config
 
 def validate_ocr(main: ComicTranslate):
-    """Ensure either API credentials are set or the user is authenticated."""
+    """Ensure the selected OCR tool has its required credentials configured."""
     settings_page = main.settings_page
     tr = settings_page.ui.tr
     settings = settings_page.get_all_settings()
@@ -41,16 +41,46 @@ def validate_ocr(main: ComicTranslate):
     if not ocr_tool:
         Messages.show_missing_tool_error(main, QCoreApplication.translate("Messages", "Text Recognition model"))
         return False
-    
-    if not settings_page.is_logged_in():
-        Messages.show_not_logged_in_error(main)
-        return False
-        
+
+    # Tools that need a Google Cloud API key
+    GOOGLE_CLOUD_OCR_TOOLS = {"Google Cloud Vision"}
+    # Tools that need Microsoft Azure credentials
+    MICROSOFT_OCR_TOOLS = {"Microsoft OCR"}
+    # Tools that need a Google Gemini API key (routed through backend unless key provided)
+    GEMINI_OCR_TOOLS = {"Gemini-2.0-Flash"}
+
+    if ocr_tool in GOOGLE_CLOUD_OCR_TOOLS:
+        api_key = credentials.get(tr('Google Cloud'), {}).get('api_key')
+        if not api_key:
+            Messages.show_missing_credentials_error(
+                main, "Google Cloud Vision",
+                QCoreApplication.translate("Messages", "Google Cloud API key (Settings > Credentials > Google Cloud)")
+            )
+            return False
+
+    elif ocr_tool in MICROSOFT_OCR_TOOLS:
+        ms_creds = credentials.get(tr('Microsoft Azure'), {})
+        if not ms_creds.get('api_key') or not ms_creds.get('endpoint'):
+            Messages.show_missing_credentials_error(
+                main, "Microsoft OCR",
+                QCoreApplication.translate("Messages", "Microsoft Azure credentials (Settings > Credentials)")
+            )
+            return False
+
+    elif ocr_tool in GEMINI_OCR_TOOLS:
+        api_key = credentials.get(tr('Google Gemini'), {}).get('api_key')
+        if not api_key:
+            Messages.show_missing_credentials_error(
+                main, ocr_tool,
+                QCoreApplication.translate("Messages", "Google Gemini API key (Settings > Credentials > Google Gemini)")
+            )
+            return False
+
     return True
 
 
 def validate_translator(main: ComicTranslate, target_lang: str):
-    """Ensure either API credentials are set or the user is authenticated, plus check compatibility."""
+    """Ensure the selected translator has its required credentials configured."""
     settings_page = main.settings_page
     tr = settings_page.ui.tr
     settings = settings_page.get_all_settings()
@@ -61,21 +91,50 @@ def validate_translator(main: ComicTranslate, target_lang: str):
         Messages.show_missing_tool_error(main, QCoreApplication.translate("Messages", "Translator"))
         return False
 
-    if not settings_page.is_logged_in():
-        Messages.show_not_logged_in_error(main)
-        return False
-
-    # Credential checks
     if "Custom" in translator_tool:
         # Custom requires api_key, api_url, and model to be configured LOCALLY
         service = tr('Custom')
         creds = credentials.get(service, {})
-        # Check if all required fields are present and non-empty
         if not all([creds.get('api_key'), creds.get('api_url'), creds.get('model')]):
             Messages.show_custom_not_configured_error(main)
             return False
-        return True
-        
+
+    elif "Gemini" in translator_tool:
+        api_key = credentials.get(tr('Google Gemini'), {}).get('api_key')
+        if not api_key:
+            Messages.show_missing_credentials_error(
+                main, translator_tool,
+                QCoreApplication.translate("Messages", "Google Gemini API key (Settings > Credentials > Google Gemini)")
+            )
+            return False
+
+    elif "GPT" in translator_tool:
+        api_key = credentials.get(tr('Open AI GPT'), {}).get('api_key')
+        if not api_key:
+            Messages.show_missing_credentials_error(
+                main, translator_tool,
+                QCoreApplication.translate("Messages", "OpenAI API key (Settings > Credentials)")
+            )
+            return False
+
+    elif "Claude" in translator_tool:
+        api_key = credentials.get(tr('Anthropic Claude'), {}).get('api_key')
+        if not api_key:
+            Messages.show_missing_credentials_error(
+                main, translator_tool,
+                QCoreApplication.translate("Messages", "Anthropic Claude API key (Settings > Credentials)")
+            )
+            return False
+
+    elif "Deepseek" in translator_tool:
+        api_key = credentials.get(tr('Deepseek'), {}).get('api_key')
+        if not api_key:
+            Messages.show_missing_credentials_error(
+                main, translator_tool,
+                QCoreApplication.translate("Messages", "Deepseek API key (Settings > Credentials)")
+            )
+            return False
+
     return True
 
 def font_selected(main: ComicTranslate):

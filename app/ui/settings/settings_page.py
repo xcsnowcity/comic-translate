@@ -78,11 +78,8 @@ class SettingsPage(QtWidgets.QWidget):
             return False
 
     def _refresh_credits_on_startup(self):
-        """If there’s a network and an existing login, fetch fresh credits."""
-        # Avoid blocking the UI thread with network calls and avoid duplicating
-        # `check_session_async()` (which already validates + refreshes user info).
-        if self._is_online() and self.auth_client.is_authenticated():
-            self.auth_client.check_session_async()
+        """Disabled: no backend communication needed."""
+        pass
 
     def _setup_connections(self):
         # Connect signals to slots
@@ -160,6 +157,13 @@ class SettingsPage(QtWidgets.QWidget):
             if normalized == "Custom":
                 for field in ("api_key", "api_url", "model"):
                     creds[field] = _text_or_none(f"Custom_{field}")
+            elif normalized == "Google Cloud":
+                creds['api_key'] = _text_or_none(f"Google Cloud_api_key")
+            else:
+                # Generic fallback: any other service with an api_key widget
+                api_key = _text_or_none(f"{normalized}_api_key")
+                if api_key is not None:
+                    creds['api_key'] = api_key
 
             return creds
 
@@ -287,6 +291,9 @@ class SettingsPage(QtWidgets.QWidget):
                     settings.setValue(f"{translated_service}_api_key", cred['api_key'])
                     settings.setValue(f"{translated_service}_api_url", cred['api_url'])
                     settings.setValue(f"{translated_service}_model", cred['model'])
+                elif cred.get('api_key') is not None:
+                    # Generic: save api_key for any other service that has one
+                    settings.setValue(f"{translated_service}_api_key", cred['api_key'])
         else:
             settings.remove('credentials')  # Clear all credentials if save_keys is unchecked
         settings.endGroup()
@@ -395,6 +402,9 @@ class SettingsPage(QtWidgets.QWidget):
                     self.ui.credential_widgets[f"{translated_service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
                     self.ui.credential_widgets[f"{translated_service}_api_url"].setText(settings.value(f"{translated_service}_api_url", ''))
                     self.ui.credential_widgets[f"{translated_service}_model"].setText(settings.value(f"{translated_service}_model", ''))
+                elif f"{translated_service}_api_key" in self.ui.credential_widgets:
+                    # Generic: load api_key for any other service that has a widget
+                    self.ui.credential_widgets[f"{translated_service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
         settings.endGroup()
 
         # ADDED: Load user info and update account view 
@@ -403,9 +413,7 @@ class SettingsPage(QtWidgets.QWidget):
         # Emit initial login state
         self.login_state_changed.emit(self.is_logged_in())
 
-        # Check session validity if logged in
-        if self.is_logged_in():
-            self.auth_client.check_session_async()
+        # Session check disabled: using own API keys, no backend needed.
         # END Load user info 
 
         # Initialize current language tracker after loading
