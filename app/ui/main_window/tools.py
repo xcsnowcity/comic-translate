@@ -175,3 +175,27 @@ class ToolStateMixin:
         self.font_dropdown.setCurrentFont(QtGui.QFont(resolved_family))
         if self.font_dropdown.currentText() != resolved_family:
             self.font_dropdown.setCurrentText(resolved_family)
+
+    def set_zoom_level(self, percent: int):
+        """Handle zoom slider value change"""
+        if self.image_viewer.hasPhoto():
+            self.image_viewer.persistent_zoom_enabled = True
+            self.image_viewer.set_zoom_percent(float(percent))
+    
+    def zoom_fit_to_view(self):
+        """Fit the image to view (disable persistent zoom)"""
+        self.image_viewer.reset_zoom()
+        # Update slider to reflect 100%
+        self.zoom_slider.blockSignals(True)
+        self.zoom_slider.setValue(100)
+        self.zoom_slider.blockSignals(False)
+    
+    def zoom_reset_to_100(self):
+        """Reset zoom to 100% (enable persistent zoom at 100%)"""
+        if self.image_viewer.hasPhoto():
+            self.image_viewer.persistent_zoom_enabled = True
+            self.image_viewer.set_zoom_percent(100.0)
+            # Update slider
+            self.zoom_slider.blockSignals(True)
+            self.zoom_slider.setValue(100)
+            self.zoom_slider.blockSignals(False)

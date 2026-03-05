@@ -25,6 +25,7 @@ class ImageViewer(QGraphicsView):
     connect_text_item =  Signal(TextBlockItem)
     page_changed = Signal(int)
     clear_text_edits = Signal()
+    zoom_changed = Signal(float)  # Emits zoom percentage
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -58,6 +59,8 @@ class ImageViewer(QGraphicsView):
         # State
         self.empty = True
         self.zoom = 0
+        self.persistent_zoom_enabled = False  # Whether to use persistent zoom
+        self.persistent_zoom_percent = 100.0  # Zoom level as percentage (10-400%)
         self.current_tool = None
         self.panning = False
         self.pan_start_pos = None
@@ -147,6 +150,57 @@ class ImageViewer(QGraphicsView):
                              viewrect.height() / scenerect.height())
                 self.scale(factor, factor)
                 self.centerOn(rect.center())
+
+    def set_zoom_percent(self, percent: float, center_on_image: bool = True):
+        """Set zoom to a specific percentage (10-400%)"""
+        if not self.hasPhoto():
+            return
+        
+        # Clamp the percentage to valid range
+        percent = max(10.0, min(400.0, percent))
+        self.persistent_zoom_percent = percent
+        
+        if self.webtoon_mode:
+            # For webtoon mode, use width-based scaling
+            rect = QRectF(0, 0, self.webtoon_manager.webtoon_width, self.webtoon_manager.total_height)
+        else:
+            rect = self.photo.boundingRect()
+        
+        if rect.isNull():
+            return
+        
+        # Reset transformation
+        self.resetTransform()
+        
+        # Calculate the scale factor: target_percent / 100
+        # We want 100% to be the fit-to-view size
+        # First calculate what fit-to-view factor would be
+        viewrect = self.viewport().rect()
+        fit_factor = min(viewrect.width() / rect.width(),
+                        viewrect.height() / rect.height())
+        
+        # Apply the zoom as a multiple of fit-to-view
+        target_factor = fit_factor * (percent / 100.0)
+        self.scale(target_factor, target_factor)
+        
+        if center_on_image:
+            self.centerOn(rect.center())
+        
+        # Emit signal so UI can update
+        self.zoom_changed.emit(percent)
+    
+    def reset_zoom(self):
+        """Reset zoom to 100% (fit-to-view)"""
+        self.persistent_zoom_enabled = False
+        self.persistent_zoom_percent = 100.0
+        self.fitInView()
+    
+    def apply_persistent_zoom(self):
+        """Apply the current persistent zoom level if enabled"""
+        if self.persistent_zoom_enabled and self.hasPhoto():
+            self.set_zoom_percent(self.persistent_zoom_percent, center_on_image=True)
+        else:
+            self.fitInView()
 
     def set_tool(self, tool: str):
         self.current_tool = tool

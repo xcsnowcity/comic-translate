@@ -141,9 +141,31 @@ class EventHandler:
             return
         
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            # Enable persistent zoom when user manually zooms
+            self.viewer.persistent_zoom_enabled = True
+            
             factor = 1.25 if event.angleDelta().y() > 0 else 1 / 1.25
             self.viewer.scale(factor, factor)
             self.viewer.zoom += 1 if factor > 1 else -1
+            
+            # Calculate current zoom percentage and emit signal
+            # Get the current scale relative to fit-to-view
+            if self.viewer.webtoon_mode:
+                rect = QtCore.QRectF(0, 0, self.viewer.webtoon_manager.webtoon_width, 
+                                    self.viewer.webtoon_manager.total_height)
+            else:
+                rect = self.viewer.photo.boundingRect()
+            
+            if not rect.isNull():
+                viewrect = self.viewer.viewport().rect()
+                fit_factor = min(viewrect.width() / rect.width(),
+                               viewrect.height() / rect.height())
+                current_transform = self.viewer.transform()
+                current_scale = current_transform.m11()  # Get x-axis scale
+                zoom_percent = (current_scale / fit_factor) * 100.0
+                zoom_percent = max(10.0, min(400.0, zoom_percent))  # Clamp to slider range
+                self.viewer.persistent_zoom_percent = zoom_percent
+                self.viewer.zoom_changed.emit(zoom_percent)
         else:
             # Call QGraphicsView's wheelEvent directly
             QtWidgets.QGraphicsView.wheelEvent(self.viewer, event)

@@ -220,6 +220,7 @@ class ComicTranslate(ComicTranslateUI):
         self.image_viewer.connect_text_item.connect(self.text_ctrl.connect_text_item_signals)
         self.image_viewer.page_changed.connect(self.webtoon_ctrl.on_page_changed)
         self.image_viewer.clear_text_edits.connect(self.text_ctrl.clear_text_edits)
+        self.image_viewer.zoom_changed.connect(self.on_zoom_changed)
 
         try:
             if self._memlogger is not None:
@@ -790,6 +791,16 @@ class ComicTranslate(ComicTranslateUI):
         os.rmdir(self.temp_dir)
 
         super().closeEvent(event)
+
+    def on_zoom_changed(self, zoom_percent: float):
+        """Update zoom slider when zoom changes via Ctrl+Wheel"""
+        try:
+            # Update slider without triggering valueChanged signal
+            self.zoom_slider.blockSignals(True)
+            self.zoom_slider.setValue(int(zoom_percent))
+            self.zoom_slider.blockSignals(False)
+        except Exception:
+            pass
 
     def shutdown(self):
         if getattr(self, "_is_shutting_down", False):

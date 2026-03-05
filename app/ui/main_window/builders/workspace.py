@@ -357,6 +357,37 @@ class WorkspaceMixin:
         tools_layout.addWidget(inp_div)
         tools_layout.addLayout(inp_tools_lay)
         tools_layout.addWidget(self.brush_eraser_slider)
+        
+        # Zoom Controls
+        zoom_div = MDivider(self.tr('Zoom'))
+        tools_layout.addWidget(zoom_div)
+        
+        zoom_controls_layout = QtWidgets.QHBoxLayout()
+        
+        self.zoom_fit_button = self.create_tool_button(svg="maximize_line.svg", checkable=False)
+        self.zoom_fit_button.setToolTip(self.tr("Fit to View"))
+        
+        self.zoom_reset_button = self.create_tool_button(svg="refresh.svg", checkable=False)
+        self.zoom_reset_button.setToolTip(self.tr("Reset Zoom to 100%"))
+        
+        zoom_controls_layout.addWidget(self.zoom_fit_button)
+        zoom_controls_layout.addWidget(self.zoom_reset_button)
+        zoom_controls_layout.addStretch()
+        
+        tools_layout.addLayout(zoom_controls_layout)
+        
+        self.zoom_slider = MSlider()
+        self.zoom_slider.setMinimum(10)
+        self.zoom_slider.setMaximum(400)
+        self.zoom_slider.setValue(100)
+        self.zoom_slider.setToolTip(self.tr("Zoom Level (%)"))
+        self.zoom_slider.valueChanged.connect(self.set_zoom_level)
+        
+        self.zoom_fit_button.clicked.connect(self.zoom_fit_to_view)
+        self.zoom_reset_button.clicked.connect(self.zoom_reset_to_100)
+        
+        tools_layout.addWidget(self.zoom_slider)
+        
         tools_layout.addStretch()
         tools_widget.setLayout(tools_layout)
 

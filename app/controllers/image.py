@@ -405,7 +405,7 @@ class ImageStateController:
             self.main.image_viewer.clear_scene()
 
         self.main.image_viewer.resetTransform()
-        self.main.image_viewer.fitInView()
+        self.main.image_viewer.apply_persistent_zoom()
         if self.main.image_files:
             self.main.mark_project_dirty()
 
@@ -1024,10 +1024,13 @@ class ImageStateController:
 
             self.main.central_stack.layout().activate()
             
-            # Fit in view only if it's the first time displaying this image and not in webtoon mode
+            # Apply zoom: use persistent zoom if enabled, otherwise fit in view for first-time display
             if first_time_display and not self.main.webtoon_mode:
-                self.main.image_viewer.fitInView()
+                self.main.image_viewer.apply_persistent_zoom()
                 self.main.displayed_images.add(file_path)  # Mark this image as displayed
+            elif self.main.image_viewer.persistent_zoom_enabled and not self.main.webtoon_mode:
+                # Apply persistent zoom for already-displayed images when navigating
+                self.main.image_viewer.apply_persistent_zoom()
 
     def on_image_processed(self, index: int, image: np.ndarray, image_path: str):
         file_on_display = self.main.image_files[self.main.curr_img_idx]

@@ -4,7 +4,7 @@ import re
 import jieba
 import janome.tokenizer
 import numpy as np
-from pythainlp.tokenize import word_tokenize
+# from pythainlp.tokenize import word_tokenize
 from .textblock import TextBlock
 import imkit as imk
 
@@ -92,8 +92,8 @@ def format_translations(blk_list: list[TextBlock], trg_lng_cd: str, upper_case: 
         elif 'ja' in trg_lng_code_lower:
             seg_result = get_japanese_tokens(translation)
 
-        elif 'th' in trg_lng_code_lower:
-            seg_result = word_tokenize(translation)
+        # elif 'th' in trg_lng_code_lower:
+        #     seg_result = word_tokenize(translation)
 
         if seg_result:
             blk.translation = ''.join(word if word in ['.', ','] else f' {word}' for word in seg_result).lstrip()
